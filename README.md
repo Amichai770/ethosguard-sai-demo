@@ -52,5 +52,17 @@ The live path is:
 
 Original prompt -> selected mainstream model API -> column one model answer -> EthosGuard SAI five-step chain -> column two diagnosis -> column three SAI-refined response.
 
+## Vercel live hosting
+Vercel is the right public hosting target for the live version because it can serve `index.html` and run the private API routes in `api/generate.js` and `api/refine.js`.
+
+Deploy flow:
+
+1. Import this GitHub repo into Vercel: `Amichai770/ethosguard-sai-demo`.
+2. Use the default framework preset, or choose Other.
+3. Add environment variables such as `OPENAI_API_KEY` and `OPENAI_MODEL` in the Vercel project dashboard.
+4. Deploy or redeploy.
+
+Without environment variables, the public Vercel page still loads, but live model calls return a key-missing message and the UI falls back to local demo logic.
+
 ## Next build step
 Build a curated gold set of 20 to 50 scenarios, compare the SAI chain outputs against Rabbi-reviewed answers, then turn the strongest examples and source principles into a source-grounded retrieval library. Full fine-tuning comes later, after hundreds or thousands of high-quality pairs exist.
