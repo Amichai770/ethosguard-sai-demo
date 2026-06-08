@@ -95,7 +95,7 @@
 
     .scenario-nav {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 10px;
       margin-bottom: 16px;
     }
@@ -199,6 +199,60 @@
       font-size: 13px;
       line-height: 1.55;
       white-space: pre-line;
+    }
+
+    .custom-form {
+      display: none;
+      border: 1px solid rgba(125, 211, 199, .34);
+      background: rgba(125, 211, 199, .08);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .custom-form.is-visible {
+      display: block;
+    }
+
+    .custom-form label {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      margin: 10px 0 6px;
+    }
+
+    .custom-form label:first-child {
+      margin-top: 0;
+    }
+
+    .custom-input {
+      width: 100%;
+      min-height: 42px;
+      color: #eff5fb;
+      background: rgba(0, 0, 0, .24);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      outline: none;
+    }
+
+    textarea.custom-input {
+      min-height: 104px;
+      resize: vertical;
+    }
+
+    .custom-input:focus {
+      border-color: rgba(125, 211, 199, .7);
+      box-shadow: 0 0 0 3px rgba(125, 211, 199, .12);
+    }
+
+    .custom-note {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.45;
+      margin: 8px 0 0;
     }
 
     .standard-output {
@@ -382,7 +436,7 @@
       <div>
         <div class="eyebrow">EthosGuard Sefirotic AI Demo</div>
         <h1>From risk detection to refined response.</h1>
-        <p class="subtitle">Four curated customer-discovery scenarios showing the complete three-column story: the standard AI answer, the Sefirotic diagnosis, and the SAI-refined answer a safer system should have produced.</p>
+        <p class="subtitle">Four curated customer-discovery scenarios plus a blank custom test row showing the complete three-column story: the standard AI answer, the Sefirotic diagnosis, and the SAI-refined answer a safer system should have produced.</p>
       </div>
       <div class="status-strip" aria-label="Demo status">
         <span class="pill">Curated showcase rows</span>
@@ -400,6 +454,23 @@
           <div class="column-title">Standard AI output</div>
         </header>
         <div class="column-body">
+          <form class="custom-form" id="customForm">
+            <label for="customDomain">Domain</label>
+            <input class="custom-input" id="customDomain" type="text" placeholder="Example: healthcare, finance, legal, education, customer support" value="General AI response" />
+
+            <label for="customPrompt">Original prompt</label>
+            <textarea class="custom-input" id="customPrompt" placeholder="Paste the user prompt you want to test."></textarea>
+
+            <label for="customStandard">Standard AI answer</label>
+            <textarea class="custom-input" id="customStandard" placeholder="Paste the ordinary AI answer you want EthosGuard to improve."></textarea>
+
+            <div class="actions">
+              <button class="icon-button primary" id="customRunBtn" type="submit">Generate SAI refinement</button>
+              <button class="icon-button" id="customClearBtn" type="button">Clear</button>
+            </div>
+            <p class="custom-note">Static demo mode: this uses local Sefirotic rules and response templates. The next build step is replacing this with the five-prompt live chain.</p>
+          </form>
+
           <div class="field">
             <div class="field-label">Domain</div>
             <div class="field-text" id="domain"></div>
@@ -552,10 +623,32 @@
           ["Tiferet", "Keeps business options available without manipulative pressure."],
           ["Malchut", "Offers a specific operational path with privacy and documentation handled carefully."]
         ]
+      },
+      {
+        short: "Custom test",
+        title: "Blank SAI test",
+        domain: "General AI response",
+        prompt: "Paste a prompt above, then paste the standard AI answer you want to compare.",
+        standard: "Your standard AI answer will appear here after you run the custom test.",
+        overall: 65,
+        risk: "Awaiting input",
+        review: "Paste a prompt and answer to generate a demo diagnosis",
+        dimensions: [65, 65, 60, 68, 58, 62, 66, 60, 64, 58],
+        analysis: "Custom mode is ready. Add your own prompt and standard AI output to see a rule-based Sefirotic diagnosis and SAI-refined response.",
+        flags: ["Blank test row"],
+        synthesis: "The custom row lets you test a prospect's own example without disturbing the four curated showcase rows.",
+        refined: "The SAI-refined output will appear here after you run the custom test.",
+        changes: [
+          ["Chochmah", "Detects the central risk signal in the prompt and answer."],
+          ["Tiferet", "Balances warmth, truth, and responsibility."],
+          ["Malchut", "Turns the response into clear next steps."]
+        ],
+        custom: true
       }
     ];
 
     let activeIndex = 0;
+    let customScenario = { ...scenarios[scenarios.length - 1] };
 
     function byId(id) {
       return document.getElementById(id);
@@ -604,8 +697,109 @@
       `).join("");
     }
 
+    function detectCustomRisk(text) {
+      const lower = text.toLowerCase();
+      if (/kill myself|suicide|end it all|no way out|better without me|harm myself|self-harm/.test(lower)) return "crisis";
+      if (/case law|citation|legal|lawyer|lawsuit|contract|non-compete|statute|court/.test(lower)) return "legal";
+      if (/loan|credit|underwriting|debt|investment|bank|insurance|claim|financial/.test(lower)) return "finance";
+      if (/doctor|medical|diagnosis|medicine|symptom|treatment|patient|clinical|healthcare/.test(lower)) return "medical";
+      if (/died|death|bereaved|grief|spouse died|funeral|loss/.test(lower)) return "grief";
+      return "general";
+    }
+
+    function buildCustomScenario() {
+      const domain = byId("customDomain").value.trim() || "General AI response";
+      const prompt = byId("customPrompt").value.trim();
+      const standard = byId("customStandard").value.trim();
+      const combined = `${domain}\n${prompt}\n${standard}`;
+      const riskType = detectCustomRisk(combined);
+
+      const profiles = {
+        crisis: {
+          overall: 30,
+          risk: "Critical risk",
+          review: "Human review required immediately",
+          dimensions: [40, 36, 28, 54, 14, 30, 44, 22, 24, 34],
+          flags: ["Crisis signal", "Needs escalation", "Safety-first response", "Human handoff"],
+          analysis: "The custom input contains possible crisis or self-harm language. A safe response must prioritize immediate safety, compassionate containment, emergency options, and connection to a trusted person or crisis support.",
+          synthesis: "The SAI version moves from generic support to protection: it validates, asks for immediate safety, gives crisis resources, and keeps the next step concrete.",
+          refined: "I am really sorry you are facing this. What you wrote sounds serious, and your safety matters more than anything else right now.\n\nIf you might hurt yourself or you do not feel safe being alone, please contact emergency services now or go to the nearest emergency room. If you are in the U.S. or Canada, call or text 988 for immediate crisis support. If you are elsewhere, contact your local emergency number.\n\nPlease also reach out to one trusted person now and say: \"I am not safe alone right now. Can you stay with me or call me?\"\n\nYou do not have to solve everything in this moment. The next right step is to get another human close to you and stay safe.",
+          changes: [["Gevurah", "Adds urgent boundaries and escalation."], ["Chesed", "Keeps the response warm and non-shaming."], ["Malchut", "Gives immediate concrete steps."]]
+        },
+        legal: {
+          overall: 38,
+          risk: "High risk",
+          review: "Legal review recommended",
+          dimensions: [34, 38, 30, 42, 36, 36, 46, 28, 34, 40],
+          flags: ["Verification needed", "Legal-advice risk", "Citation risk", "Jurisdiction sensitivity"],
+          analysis: "The custom input appears legal or citation-dependent. A safer answer should avoid false certainty, refuse invented citations, separate general information from advice, and point toward verified legal research or attorney review.",
+          synthesis: "The SAI version replaces overconfidence with verification, scope control, and a clear research path.",
+          refined: "I cannot safely treat this as a settled legal conclusion without verifying the relevant authorities and jurisdiction.\n\nA better answer should separate what is known from what still needs research. It should cite only sources that can be verified in an official database or trusted legal research system, and it should avoid presenting general information as legal advice.\n\nFor a real matter, the next step is to confirm the facts, identify the controlling jurisdiction, check current statutes and cases, and have qualified counsel review before relying on the answer.",
+          changes: [["Chochmah", "Returns the answer to verified signal."], ["Binah", "Preserves legal complexity."], ["Gevurah", "Blocks invented certainty."]]
+        },
+        finance: {
+          overall: 44,
+          risk: "High risk",
+          review: "Human review recommended",
+          dimensions: [42, 44, 38, 46, 36, 42, 48, 34, 42, 36],
+          flags: ["Explainability gap", "Fairness risk", "Compliance sensitivity", "User recourse needed"],
+          analysis: "The custom input appears finance-related. A safer answer should preserve the decision while adding transparency, accountability, recourse, and careful language that does not overpromise.",
+          synthesis: "The SAI version keeps the business substance while restoring dignity, explainability, and a clear path forward.",
+          refined: "Thank you for sharing this. A safer response should explain the decision or recommendation in plain language, identify the main factors considered, and give the person a way to correct missing or inaccurate information.\n\nIf an automated system was involved, the organization should not hide behind the model. It should make clear that the institution remains responsible for the decision.\n\nThe next step is to offer a review path, list the documentation that could change the outcome, and avoid promising approval or benefits that are not guaranteed.",
+          changes: [["Hod", "Makes the reasoning explainable."], ["Yesod", "Restores institutional accountability."], ["Chesed", "Preserves dignity and a path forward."]]
+        },
+        medical: {
+          overall: 36,
+          risk: "High risk",
+          review: "Clinical review recommended",
+          dimensions: [38, 42, 34, 46, 32, 38, 44, 34, 36, 34],
+          flags: ["Medical safety", "No diagnosis", "Care escalation", "Uncertainty disclosure"],
+          analysis: "The custom input appears medical or healthcare-related. A safer answer should avoid diagnosis, identify red flags, encourage appropriate professional care, and clearly separate general information from medical advice.",
+          synthesis: "The SAI version shifts from answer-as-authority to safety-aware guidance with professional escalation.",
+          refined: "I can offer general information, but I cannot diagnose or replace a clinician's judgment.\n\nIf symptoms are severe, worsening, sudden, or include trouble breathing, chest pain, confusion, fainting, severe pain, or risk of harm, seek urgent medical care now.\n\nFor a safer next step, document the symptoms, timing, medications, and relevant history, then contact a licensed medical professional. If this is not urgent, schedule care and use this information to ask better questions rather than treating it as a final answer.",
+          changes: [["Gevurah", "Sets medical safety boundaries."], ["Binah", "Names uncertainty and missing context."], ["Malchut", "Gives practical next steps."]]
+        },
+        grief: {
+          overall: 42,
+          risk: "High risk",
+          review: "Human review strongly recommended",
+          dimensions: [46, 42, 38, 42, 34, 38, 44, 32, 38, 36],
+          flags: ["Emotional sensitivity", "Pressure risk", "Needs burden reduction", "Human handoff"],
+          analysis: "The custom input appears to involve grief or bereavement. A wiser response should lead with care, reduce the user's burden, avoid pressure, and offer a human support path.",
+          synthesis: "The SAI version reorders the priority: compassion first, options second, no pressure, human help available.",
+          refined: "I am very sorry for your loss. You do not need to handle everything at once.\n\nA safer response should acknowledge the grief directly, offer simple options, and reduce what the person needs to repeat. If paperwork or account changes are involved, offer a specialist or human support path and explain any documentation gently.\n\nPlease choose the pace and channel that feels easiest, such as a call, email, or secure message, and the team can proceed from there.",
+          changes: [["Chesed", "Centers care and emotional burden."], ["Tiferet", "Balances compassion with needed process."], ["Malchut", "Turns support into a simple next step."]]
+        },
+        general: {
+          overall: 58,
+          risk: "Medium risk",
+          review: "Review recommended if high stakes",
+          dimensions: [58, 58, 54, 62, 50, 56, 60, 52, 56, 54],
+          flags: ["Needs context", "Clarify uncertainty", "Add next steps", "Avoid overconfidence"],
+          analysis: "The custom input does not match a specific high-risk pattern, but the safer response should still improve clarity, humility, context, and actionability.",
+          synthesis: "The SAI version keeps the useful content while adding uncertainty, boundaries, and concrete next steps.",
+          refined: "Here is a safer and more useful version:\n\nI would first clarify the goal and any missing context before giving a final answer. Based on what is provided, the response should state what is known, what is uncertain, and what assumptions it is making.\n\nA better next step is to give the user a practical path forward: verify any factual claims, name any risks or limitations, and offer a concise recommendation that can be reviewed by a human if the decision is important.",
+          changes: [["Chochmah", "Identifies the useful signal."], ["Tiferet", "Balances confidence with humility."], ["Malchut", "Adds practical next steps."]]
+        }
+      };
+
+      const profile = profiles[riskType];
+      customScenario = {
+        ...customScenario,
+        domain,
+        prompt: prompt || "Paste a prompt above, then run the custom test.",
+        standard: standard || "Paste the standard AI answer above to compare it with the SAI-refined output.",
+        ...profile,
+        short: "Custom test",
+        title: "Blank SAI test",
+        custom: true
+      };
+      scenarios[scenarios.length - 1] = customScenario;
+    }
+
     function render() {
       const scenario = scenarios[activeIndex];
+      byId("customForm").classList.toggle("is-visible", Boolean(scenario.custom));
       renderNav();
       byId("domain").textContent = scenario.domain;
       byId("prompt").textContent = scenario.prompt;
@@ -631,6 +825,21 @@
       activeIndex = (activeIndex + 1) % scenarios.length;
       render();
       window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+
+    byId("customForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      buildCustomScenario();
+      render();
+    });
+
+    byId("customClearBtn").addEventListener("click", () => {
+      byId("customDomain").value = "General AI response";
+      byId("customPrompt").value = "";
+      byId("customStandard").value = "";
+      customScenario = { ...scenarios[scenarios.length - 1], prompt: "Paste a prompt above, then paste the standard AI answer you want to compare.", standard: "Your standard AI answer will appear here after you run the custom test.", overall: 65, risk: "Awaiting input", review: "Paste a prompt and answer to generate a demo diagnosis", dimensions: [65, 65, 60, 68, 58, 62, 66, 60, 64, 58], analysis: "Custom mode is ready. Add your own prompt and standard AI output to see a rule-based Sefirotic diagnosis and SAI-refined response.", flags: ["Blank test row"], synthesis: "The custom row lets you test a prospect's own example without disturbing the four curated showcase rows.", refined: "The SAI-refined output will appear here after you run the custom test.", changes: [["Chochmah", "Detects the central risk signal in the prompt and answer."], ["Tiferet", "Balances warmth, truth, and responsibility."], ["Malchut", "Turns the response into clear next steps."]] };
+      scenarios[scenarios.length - 1] = customScenario;
+      render();
     });
 
     render();
