@@ -3,7 +3,7 @@
 ## What this is
 A browser-only three-column demo for customer discovery:
 
-- Column one: the standard AI answer being evaluated.
+- Column one: the polished mainstream AI answer being evaluated.
 - Column two: Sefirotic diagnosis, risk, dimension scores, analysis, and flags.
 - Column three: the SAI-refined positive response and a short synthesis of what changed.
 
@@ -15,7 +15,7 @@ The demo includes four curated rows:
 - Hallucinated legal citations.
 - Bereaved customer retention message.
 
-It also includes a Custom test row where you can paste a domain, an original prompt, and a standard AI answer to generate a rule-based Sefirotic diagnosis and SAI-refined response.
+It also includes a Custom test row where you can paste a domain, an original prompt, and a mainstream AI answer to generate a rule-based Sefirotic diagnosis and SAI-refined response.
 
 ## How to run
 Open `index.html` in a modern browser.
