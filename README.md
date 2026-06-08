@@ -15,6 +15,8 @@ The demo includes four curated rows:
 - Hallucinated legal citations.
 - Bereaved customer retention message.
 
+It also includes a Custom test row where you can paste a domain, an original prompt, and a standard AI answer to generate a rule-based Sefirotic diagnosis and SAI-refined response.
+
 ## How to run
 Open `index.html` in a modern browser.
 
