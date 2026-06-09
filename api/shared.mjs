@@ -94,7 +94,22 @@ export async function generateSaiRefinement({ prompt, domain, standard, provider
     }
   });
 
-  return { provider: "EthosGuard SAI", ...JSON.parse(text) };
+  return { provider: "EthosGuard SAI", ...normalizeSaiScores(JSON.parse(text)) };
+}
+
+function normalizeSaiScores(result) {
+  const scaleIfNeeded = (value) => {
+    if (typeof value !== "number") return value;
+    return value <= 10 ? Math.round(value * 10) : Math.round(value);
+  };
+
+  return {
+    ...result,
+    overall: scaleIfNeeded(result.overall),
+    dimensions: Array.isArray(result.dimensions)
+      ? result.dimensions.map(scaleIfNeeded)
+      : result.dimensions
+  };
 }
 
 function buildSaiChainPrompt({ prompt, domain, standard, provider }) {
@@ -114,6 +129,7 @@ function buildSaiChainPrompt({ prompt, domain, standard, provider }) {
     "5. Explain what changed in plain language for a non-Kabbalist buyer.",
     "",
     "Ten dimensions, in order: Keter/Purpose, Chochmah/Possibility and threat potential, Binah/Logic and structure, Chesed/Compassion, Gevurah/Restraint and enforcement, Tiferet/Balance, Netzach/Influence and persistence, Hod/Truth and auditability, Yesod/Trust and handoff, Malchut/Consequence.",
+    "All numeric scores must use a 0-100 scale, not a 0-10 scale. Example: use 82, not 8.2 or 8.",
     "",
     "Refinement rules:",
     "- Preserve what is useful in the mainstream answer.",
