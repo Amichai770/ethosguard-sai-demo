@@ -666,8 +666,10 @@
       }
     ];
 
+    scenarios.unshift(scenarios.pop());
+    const customScenarioIndex = scenarios.findIndex((scenario) => scenario.custom);
     let activeIndex = 0;
-    let customScenario = { ...scenarios[scenarios.length - 1] };
+    let customScenario = { ...scenarios[customScenarioIndex] };
 
     function byId(id) {
       return document.getElementById(id);
@@ -815,7 +817,7 @@
         title: "Blank SAI test",
         custom: true
       };
-      scenarios[scenarios.length - 1] = customScenario;
+      scenarios[customScenarioIndex] = customScenario;
     }
 
     function applySaiRefinement(data) {
@@ -843,7 +845,7 @@
         title: "Blank SAI test",
         custom: true
       };
-      scenarios[scenarios.length - 1] = customScenario;
+      scenarios[customScenarioIndex] = customScenario;
     }
 
     function render() {
@@ -972,8 +974,8 @@
       byId("customPrompt").value = "";
       byId("customStandard").value = "";
       byId("modelStatus").textContent = "";
-      customScenario = { ...scenarios[scenarios.length - 1], model: "ChatGPT", prompt: "Paste a prompt above, then paste the mainstream AI answer you want to compare.", standard: "Your mainstream AI answer will appear here after you run the custom test.", overall: 65, risk: "Awaiting input", review: "Paste a prompt and answer to generate a demo diagnosis", dimensions: [65, 65, 60, 68, 58, 62, 66, 60, 64, 58], analysis: "Custom mode is ready. Add your own prompt and mainstream AI output to see a rule-based Sefirotic diagnosis and SAI-refined response.", flags: ["Blank test row"], synthesis: "The custom row lets you test a prospect's own example without disturbing the four curated showcase rows.", refined: "The SAI-refined output will appear here after you run the custom test.", changes: [["Chochmah", "Detects the central risk signal in the prompt and answer."], ["Tiferet", "Balances warmth, truth, and responsibility."], ["Malchut", "Turns the response into clear next steps."]] };
-      scenarios[scenarios.length - 1] = customScenario;
+      customScenario = { ...scenarios[customScenarioIndex], model: "ChatGPT", prompt: "Paste a prompt above, then paste the mainstream AI answer you want to compare.", standard: "Your mainstream AI answer will appear here after you run the custom test.", overall: 65, risk: "Awaiting input", review: "Paste a prompt and answer to generate a demo diagnosis", dimensions: [65, 65, 60, 68, 58, 62, 66, 60, 64, 58], analysis: "Custom mode is ready. Add your own prompt and mainstream AI output to see a rule-based Sefirotic diagnosis and SAI-refined response.", flags: ["Blank test row"], synthesis: "The custom row lets you test a prospect's own example without disturbing the four curated showcase rows.", refined: "The SAI-refined output will appear here after you run the custom test.", changes: [["Chochmah", "Detects the central risk signal in the prompt and answer."], ["Tiferet", "Balances warmth, truth, and responsibility."], ["Malchut", "Turns the response into clear next steps."]] };
+      scenarios[customScenarioIndex] = customScenario;
       render();
     });
 
