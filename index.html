@@ -473,10 +473,12 @@
             <textarea class="custom-input" id="customStandard" placeholder="Paste the ChatGPT, Claude, Gemini, or other model answer you want EthosGuard to improve."></textarea>
 
             <div class="actions">
+              <button class="icon-button" id="generateModelBtn" type="button">Ask selected model</button>
               <button class="icon-button primary" id="customRunBtn" type="submit">Generate SAI refinement</button>
               <button class="icon-button" id="customClearBtn" type="button">Clear</button>
             </div>
-            <p class="custom-note">Static demo mode: paste an answer from ChatGPT, Claude, Gemini, or another model. EthosGuard then shows the SAI layer that would sit above the mainstream model.</p>
+            <p class="custom-note" id="modelStatus" aria-live="polite"></p>
+            <p class="custom-note">Paste mode works from the static file. Live model generation works from the local server when the selected provider API key is configured.</p>
           </form>
 
           <div class="field">
@@ -816,6 +818,34 @@
       scenarios[scenarios.length - 1] = customScenario;
     }
 
+    function applySaiRefinement(data) {
+      const model = byId("customModel").value;
+      const domain = byId("customDomain").value.trim() || "General AI response";
+      const prompt = byId("customPrompt").value.trim();
+      const standard = byId("customStandard").value.trim();
+
+      customScenario = {
+        ...customScenario,
+        model,
+        domain,
+        prompt: prompt || "Paste a prompt above, then run the custom test.",
+        standard: standard || "Paste the mainstream AI answer above to compare it with the SAI-refined output.",
+        overall: Math.round(Number(data.overall) || 0),
+        risk: data.risk || "Review recommended",
+        review: data.review || "Human review recommended if high stakes",
+        dimensions: Array.isArray(data.dimensions) && data.dimensions.length === 10 ? data.dimensions.map((score) => Math.round(Number(score) || 0)) : [58, 58, 54, 62, 50, 56, 60, 52, 56, 54],
+        analysis: data.analysis || "EthosGuard SAI reviewed the answer against the Sefirotic prescription for this situation.",
+        flags: Array.isArray(data.flags) && data.flags.length ? data.flags : ["SAI chain review"],
+        synthesis: data.synthesis || "The SAI version preserves useful content while adding balance, humility, boundaries, and real-world next steps.",
+        refined: data.refined || "The SAI-refined output could not be generated.",
+        changes: Array.isArray(data.changes) && data.changes.length ? data.changes : [["Tiferet", "Balances the response."], ["Hod", "Adds humility and truthfulness."], ["Malchut", "Stress-tests real-world consequence."]],
+        short: "Custom test",
+        title: "Blank SAI test",
+        custom: true
+      };
+      scenarios[scenarios.length - 1] = customScenario;
+    }
+
     function render() {
       const scenario = scenarios[activeIndex];
       byId("customForm").classList.toggle("is-visible", Boolean(scenario.custom));
@@ -848,10 +878,92 @@
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
 
-    byId("customForm").addEventListener("submit", (event) => {
+    byId("customForm").addEventListener("submit", async (event) => {
       event.preventDefault();
-      buildCustomScenario();
-      render();
+      const status = byId("modelStatus");
+      const runButton = byId("customRunBtn");
+      const prompt = byId("customPrompt").value.trim();
+      const domain = byId("customDomain").value.trim() || "General AI response";
+      const standard = byId("customStandard").value.trim();
+      const provider = byId("customModel").value;
+
+      if (!prompt || !standard) {
+        buildCustomScenario();
+        render();
+        status.textContent = "Add both the original prompt and model answer for the strongest SAI refinement. Showing the local rule-based version for now.";
+        return;
+      }
+
+      if (window.location.protocol === "file:" || window.location.hostname.endsWith("github.io")) {
+        buildCustomScenario();
+        render();
+        status.textContent = "The stronger SAI chain requires the backend server. Showing the local rule-based version for now.";
+        return;
+      }
+
+      status.textContent = "Running the EthosGuard SAI five-step refinement chain...";
+      runButton.disabled = true;
+
+      try {
+        const response = await fetch("/api/refine", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ provider, prompt, domain, standard })
+        });
+        const text = await response.text();
+        const data = text ? JSON.parse(text) : {};
+        if (!response.ok) throw new Error(data.error || "SAI refinement failed.");
+
+        applySaiRefinement(data);
+        render();
+        status.textContent = "EthosGuard SAI refinement generated from the five-step chain.";
+      } catch (error) {
+        buildCustomScenario();
+        render();
+        status.textContent = `${error.message || "Could not run the SAI chain."} Showing the local rule-based version for now.`;
+      } finally {
+        runButton.disabled = false;
+      }
+    });
+
+    byId("generateModelBtn").addEventListener("click", async () => {
+      const status = byId("modelStatus");
+      const prompt = byId("customPrompt").value.trim();
+      const domain = byId("customDomain").value.trim() || "General AI response";
+      const provider = byId("customModel").value;
+
+      if (!prompt) {
+        status.textContent = "Add an original prompt first, then ask the selected model.";
+        return;
+      }
+
+      if (window.location.protocol === "file:" || window.location.hostname.endsWith("github.io")) {
+        status.textContent = "Live model calls require the backend server. Open http://localhost:4173 after running npm start, or deploy the backend as a serverless function.";
+        return;
+      }
+
+      status.textContent = `Asking ${provider} for the mainstream answer...`;
+      byId("generateModelBtn").disabled = true;
+
+      try {
+        const response = await fetch("/api/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ provider, prompt, domain })
+        });
+        const text = await response.text();
+        const data = text ? JSON.parse(text) : {};
+        if (!response.ok) throw new Error(data.error || "Model generation failed.");
+
+        byId("customStandard").value = data.answer || "";
+        buildCustomScenario();
+        render();
+        status.textContent = `${data.provider || provider} answer generated. SAI refinement is shown in column three.`;
+      } catch (error) {
+        status.textContent = error.message || "Could not generate the model answer.";
+      } finally {
+        byId("generateModelBtn").disabled = false;
+      }
     });
 
     byId("customClearBtn").addEventListener("click", () => {
@@ -859,6 +971,7 @@
       byId("customDomain").value = "General AI response";
       byId("customPrompt").value = "";
       byId("customStandard").value = "";
+      byId("modelStatus").textContent = "";
       customScenario = { ...scenarios[scenarios.length - 1], model: "ChatGPT", prompt: "Paste a prompt above, then paste the mainstream AI answer you want to compare.", standard: "Your mainstream AI answer will appear here after you run the custom test.", overall: 65, risk: "Awaiting input", review: "Paste a prompt and answer to generate a demo diagnosis", dimensions: [65, 65, 60, 68, 58, 62, 66, 60, 64, 58], analysis: "Custom mode is ready. Add your own prompt and mainstream AI output to see a rule-based Sefirotic diagnosis and SAI-refined response.", flags: ["Blank test row"], synthesis: "The custom row lets you test a prospect's own example without disturbing the four curated showcase rows.", refined: "The SAI-refined output will appear here after you run the custom test.", changes: [["Chochmah", "Detects the central risk signal in the prompt and answer."], ["Tiferet", "Balances warmth, truth, and responsibility."], ["Malchut", "Turns the response into clear next steps."]] };
       scenarios[scenarios.length - 1] = customScenario;
       render();
